@@ -238,6 +238,10 @@ class Document(models.Model):
     myfile = models.FileField(upload_to="unused", unique=True)
 
 
+class NullableDocument(models.Model):
+    myfile = models.FileField(upload_to="unused", unique=True, null=True)
+
+
 ###############################################################################
 # ImageField
 

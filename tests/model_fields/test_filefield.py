@@ -13,7 +13,7 @@ from django.db import IntegrityError, models
 from django.test import TestCase, override_settings
 from django.test.utils import isolate_apps
 
-from .models import Document
+from .models import Document, NullableDocument
 
 
 class FileFieldTests(TestCase):
@@ -186,3 +186,30 @@ class FileFieldTests(TestCase):
 
         document = MyDocument(myfile="test_file.py")
         self.assertEqual(document.myfile.field.model, MyDocument)
+
+    def test_create_empty(self):
+        # when I create a new document with no file provided
+        d = NullableDocument.objects.create(myfile=None)
+        # I expect that the attribute itself is None
+        self.assertIs(d.myfile, None)
+        # I expect that I can filter the documents and find the one
+        query = NullableDocument.objects.filter(myfile__isnull=True).exists()
+        self.assertTrue(query)
+        # I expect that the object remains None even after refreshing from the DB
+        d.refresh_from_db()
+        self.assertIs(d.myfile, None)
+
+    def test_create_empty_multiple(self):
+        # when the files are expected to be unique but nullable, I expect that I'm
+        # allowed to create multiple records
+        NullableDocument.objects.create(myfile=None)
+        NullableDocument.objects.create(myfile=None)
+        # and both are created
+        query = NullableDocument.objects.filter(myfile__isnull=True).count()
+        self.assertEqual(query, 2)
+
+    def test_create_empty_on_not_null(self):
+        # when I try to store an empty file on non-nullable model, I expect to get an
+        # integrity error
+        with self.assertRaises(IntegrityError):
+            Document.objects.create(myfile=None)
